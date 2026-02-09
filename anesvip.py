@@ -22,7 +22,7 @@ def append_file(file_name, content):
         with open(file_name, "a", encoding="utf-8") as f:
             f.write(str(content) + "\n")
 
-# --- لوحة التحكم ---
+# --- لوحة التحكم للمطور ---
 def admin_keyboard():
     markup = telebot.types.InlineKeyboardMarkup()
     markup.row(telebot.types.InlineKeyboardButton(f"• المشتركين: {len(read_file('member.txt').splitlines())}", callback_data="m1"))
@@ -34,7 +34,17 @@ def admin_keyboard():
     markup.row(telebot.types.InlineKeyboardButton("حظر عضو✅", callback_data="ban"), telebot.types.InlineKeyboardButton("الغاء حظر عضو❌", callback_data="unban"))
     return markup
 
-# --- معالجة الأزرار (هنا تم تفعيل الاشتراك والإذاعة) ---
+# --- لوحة الأزرار للمستخدمين (المحتوى) ---
+def user_keyboard():
+    markup = telebot.types.InlineKeyboardMarkup()
+    buttons = read_file("custom_buttons.txt").splitlines()
+    for btn in buttons:
+        if "|" in btn:
+            name, url = btn.split("|")
+            markup.add(telebot.types.InlineKeyboardButton(text=name, url=url))
+    return markup
+
+# --- معالجة الأزرار ---
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
     chat_id = call.message.chat.id
@@ -43,24 +53,15 @@ def callback_inline(call):
     if call.data == "send":
         bot.edit_message_text("📥 أرسل الآن الرسالة التي تريد إذاعتها للمشتركين:", chat_id, call.message.message_id)
         write_file("rembo.txt", "broadcast")
-
-    elif call.data == "forward":
-        bot.edit_message_text("🔄 قم بتوجيه (Forward) الرسالة التي تريد نشرها هنا:", chat_id, call.message.message_id)
-        write_file("rembo.txt", "fwd_broadcast")
-
     elif call.data == "ach":
         bot.edit_message_text("💢 أرسل الآن معرف القناة للاشتراك الإجباري (مثال: @MyChannel):", chat_id, call.message.message_id)
         write_file("rembo.txt", "set_channel")
-
     elif call.data == "dch":
         write_file("channel.txt", "")
         bot.answer_callback_query(call.id, "✅ تم حذف الاشتراك الإجباري", show_alert=True)
-
-    # بقية أزرار الإضافة والحذف
     elif call.data == "add_btn":
         bot.edit_message_text("➕ أرسل اسم الزر الجديد:", chat_id, call.message.message_id)
         write_file("rembo.txt", "add_name")
-    
     elif call.data == "m1":
         count = len(read_file("member.txt").splitlines())
         bot.answer_callback_query(call.id, f"عدد المشتركين: {count}", show_alert=True)
@@ -75,15 +76,21 @@ def handle_messages(message):
     # حفظ المشتركين
     append_file("member.txt", user_id)
 
+    # رد خاص للمستخدمين عند كتابة /start
+    if text == "/start":
+        welcome_msg = "أهلاً بك في البوت!ANES VIP اضغط على الأزرار أدناه لمشاهدة المحتوى:"
+        bot.send_message(chat_id, welcome_msg, reply_markup=user_keyboard())
+        return
+
+    # رد خاص للمطور
     if text in ["/admin", "/rembo"] and user_id == ADMIN_ID:
         bot.send_message(chat_id, "اهلا بڪ عزيزي المطور، اليڪ اوامرڪ⚡📮", reply_markup=admin_keyboard())
         return
 
-    # تنفيذ أوامر الأدمن بناءً على الحالة (Step)
+    # تنفيذ أوامر الأدمن (الإذاعة وإضافة الأزرار)
     if user_id == ADMIN_ID:
         step = read_file("rembo.txt")
-
-        if step == "broadcast": # الإذاعة
+        if step == "broadcast":
             members = read_file("member.txt").splitlines()
             count = 0
             for m in members:
@@ -93,21 +100,14 @@ def handle_messages(message):
                 except: pass
             bot.send_message(chat_id, f"✅ تمت الإذاعة لـ {count} مشترك.", reply_markup=admin_keyboard())
             write_file("rembo.txt", "")
-
-        elif step == "set_channel": # تعيين القناة
-            write_file("channel.txt", text)
-            bot.send_message(chat_id, f"✅ تم حفظ القناة: {text}", reply_markup=admin_keyboard())
-            write_file("rembo.txt", "")
-
         elif step == "add_name":
             write_file("temp_name.txt", text)
             bot.send_message(chat_id, "🔗 أرسل الرابط الآن:")
             write_file("rembo.txt", "add_url")
-            
         elif step == "add_url":
             name = read_file("temp_name.txt")
             append_file("custom_buttons.txt", f"{name}|{text}")
-            bot.send_message(chat_id, "✅ تم إضافة الزر.", reply_markup=admin_keyboard())
+            bot.send_message(chat_id, "✅ تم إضافة الزر بنجاح.", reply_markup=admin_keyboard())
             write_file("rembo.txt", "")
 
 bot.polling(none_stop=True)

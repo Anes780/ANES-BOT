@@ -6,7 +6,7 @@ API_TOKEN = '8570721750:AAHMQZuy28BRhCCtu-4aa5WxLgl_OAqx1qI'
 ADMIN_ID = 8353270608
 bot = telebot.TeleBot(API_TOKEN)
 
-# --- وظائف الملفات ---
+# وظائف الملفات
 def read_file(file_name, default=""):
     if os.path.exists(file_name):
         with open(file_name, "r", encoding="utf-8") as f:
@@ -17,97 +17,84 @@ def write_file(file_name, content):
     with open(file_name, "w", encoding="utf-8") as f:
         f.write(str(content))
 
-def append_file(file_name, content):
-    if str(content) not in read_file(file_name).splitlines():
-        with open(file_name, "a", encoding="utf-8") as f:
-            f.write(str(content) + "\n")
-
-# --- لوحة التحكم للمطور ---
+# لوحة التحكم للمطور
 def admin_keyboard():
     markup = telebot.types.InlineKeyboardMarkup()
-    markup.row(telebot.types.InlineKeyboardButton(f"• المشتركين: {len(read_file('member.txt').splitlines())}", callback_data="m1"))
-    markup.row(telebot.types.InlineKeyboardButton("➕ إضافة زر", callback_data="add_btn"), telebot.types.InlineKeyboardButton("🗑 حذف زر", callback_data="del_btn"))
-    markup.row(telebot.types.InlineKeyboardButton("• اذاعهہ‏‏ رسـآله📮", callback_data="send"), telebot.types.InlineKeyboardButton("• توجہيه رسالهہ‏‏‏‏🔄", callback_data="forward"))
-    markup.row(telebot.types.InlineKeyboardButton("• وضع اشتراك اجباري💢", callback_data="ach"), telebot.types.InlineKeyboardButton("• حذف اشتراك اجباري🔱", callback_data="dch"))
-    markup.row(telebot.types.InlineKeyboardButton("• تفعيل التنبيه✔️", callback_data="ons"), telebot.types.InlineKeyboardButton("• تعطيل التنبيه❎", callback_data="ofs"))
-    markup.row(telebot.types.InlineKeyboardButton("فتح البوت✅", callback_data="obot"), telebot.types.InlineKeyboardButton("ايقاف البوت❌", callback_data="ofbot"))
-    markup.row(telebot.types.InlineKeyboardButton("حظر عضو✅", callback_data="ban"), telebot.types.InlineKeyboardButton("الغاء حظر عضو❌", callback_data="unban"))
+    markup.row(telebot.types.InlineKeyboardButton("➕ إضافة زر محتوى", callback_data="add_content_btn"))
+    markup.row(telebot.types.InlineKeyboardButton("🗑 حذف الكل", callback_data="clear_all"))
     return markup
 
-# --- لوحة الأزرار للمستخدمين (المحتوى) ---
+# لوحة الأزرار للمستخدمين
 def user_keyboard():
     markup = telebot.types.InlineKeyboardMarkup()
-    buttons = read_file("custom_buttons.txt").splitlines()
-    for btn in buttons:
-        if "|" in btn:
-            name, url = btn.split("|")
-            markup.add(telebot.types.InlineKeyboardButton(text=name, url=url))
+    buttons = read_file("buttons_map.txt").splitlines()
+    for line in buttons:
+        if "|" in line:
+            btn_id, btn_name = line.split("|")
+            markup.add(telebot.types.InlineKeyboardButton(text=btn_name, callback_data=f"user_{btn_id}"))
     return markup
 
-# --- معالجة الأزرار ---
+# معالجة الضغط على الأزرار
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
     chat_id = call.message.chat.id
-    if call.from_user.id != ADMIN_ID: return
+    
+    # إذا ضغط المستخدم العادي على زر محتوى
+    if call.data.startswith("user_"):
+        btn_id = call.data.replace("user_", "")
+        content = read_file(f"content_{btn_id}.txt")
+        if content.startswith("file_id:"):
+            bot.send_document(chat_id, content.replace("file_id:", ""))
+        else:
+            bot.send_message(chat_id, content)
+            
+    # أوامر الأدمن
+    if call.from_user.id == ADMIN_ID:
+        if call.data == "add_content_btn":
+            bot.edit_message_text("➕ أرسل اسم الزر الجديد:", chat_id, call.message.message_id)
+            write_file("rembo.txt", "step_name")
+        elif call.data == "clear_all":
+            write_file("buttons_map.txt", "")
+            bot.answer_callback_query(call.id, "✅ تم حذف جميع الأزرار")
 
-    if call.data == "send":
-        bot.edit_message_text("📥 أرسل الآن الرسالة التي تريد إذاعتها للمشتركين:", chat_id, call.message.message_id)
-        write_file("rembo.txt", "broadcast")
-    elif call.data == "ach":
-        bot.edit_message_text("💢 أرسل الآن معرف القناة للاشتراك الإجباري (مثال: @MyChannel):", chat_id, call.message.message_id)
-        write_file("rembo.txt", "set_channel")
-    elif call.data == "dch":
-        write_file("channel.txt", "")
-        bot.answer_callback_query(call.id, "✅ تم حذف الاشتراك الإجباري", show_alert=True)
-    elif call.data == "add_btn":
-        bot.edit_message_text("➕ أرسل اسم الزر الجديد:", chat_id, call.message.message_id)
-        write_file("rembo.txt", "add_name")
-    elif call.data == "m1":
-        count = len(read_file("member.txt").splitlines())
-        bot.answer_callback_query(call.id, f"عدد المشتركين: {count}", show_alert=True)
-
-# --- معالجة الرسائل ---
-@bot.message_handler(func=lambda message: True)
+# معالجة الرسائل
+@bot.message_handler(content_types=['text', 'document', 'photo'])
 def handle_messages(message):
     user_id = message.from_user.id
-    chat_id = message.chat.id
-    text = message.text
-
-    # حفظ المشتركين
-    append_file("member.txt", user_id)
-
-    # رد خاص للمستخدمين عند كتابة /start
-    if text == "/start":
-        welcome_msg = "أهلاً بك في البوت!ANES VIP اضغط على الأزرار أدناه لمشاهدة المحتوى:"
-        bot.send_message(chat_id, welcome_msg, reply_markup=user_keyboard())
+    
+    if message.text == "/start":
+        bot.send_message(message.chat.id, "مرحباً بك! اختر المحتوى:", reply_markup=user_keyboard())
         return
 
-    # رد خاص للمطور
-    if text in ["/admin", "/rembo"] and user_id == ADMIN_ID:
-        bot.send_message(chat_id, "اهلا بڪ عزيزي المطور، اليڪ اوامرڪ⚡📮", reply_markup=admin_keyboard())
+    if message.text == "/admin" and user_id == ADMIN_ID:
+        bot.send_message(message.chat.id, "لوحة التحكم:", reply_markup=admin_keyboard())
         return
 
-    # تنفيذ أوامر الأدمن (الإذاعة وإضافة الأزرار)
+    # خطوات إضافة الزر (للأدمن فقط)
     if user_id == ADMIN_ID:
         step = read_file("rembo.txt")
-        if step == "broadcast":
-            members = read_file("member.txt").splitlines()
-            count = 0
-            for m in members:
-                try:
-                    bot.send_message(m, text)
-                    count += 1
-                except: pass
-            bot.send_message(chat_id, f"✅ تمت الإذاعة لـ {count} مشترك.", reply_markup=admin_keyboard())
-            write_file("rembo.txt", "")
-        elif step == "add_name":
-            write_file("temp_name.txt", text)
-            bot.send_message(chat_id, "🔗 أرسل الرابط الآن:")
-            write_file("rembo.txt", "add_url")
-        elif step == "add_url":
-            name = read_file("temp_name.txt")
-            append_file("custom_buttons.txt", f"{name}|{text}")
-            bot.send_message(chat_id, "✅ تم إضافة الزر بنجاح.", reply_markup=admin_keyboard())
+        
+        if step == "step_name":
+            btn_id = str(message.message_id)
+            write_file("temp_btn_id.txt", btn_id)
+            write_file("temp_btn_name.txt", message.text)
+            bot.send_message(message.chat.id, f"✅ تم حفظ الاسم: {message.text}\nالآن أرسل المحتوى (نص أو ملف):")
+            write_file("rembo.txt", "step_content")
+            
+        elif step == "step_content":
+            btn_id = read_file("temp_btn_id.txt")
+            btn_name = read_file("temp_btn_name.txt")
+            
+            if message.content_type == 'text':
+                write_file(f"content_{btn_id}.txt", message.text)
+            elif message.content_type == 'document':
+                write_file(f"content_{btn_id}.txt", f"file_id:{message.document.file_id}")
+            
+            with open("buttons_map.txt", "a") as f:
+                f.write(f"{btn_id}|{btn_name}\n")
+                
+            bot.send_message(message.chat.id, "✅ تم إنشاء الزر بنجاح!", reply_markup=admin_keyboard())
             write_file("rembo.txt", "")
 
 bot.polling(none_stop=True)
+    

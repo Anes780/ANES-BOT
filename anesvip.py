@@ -651,12 +651,12 @@ def recreate_welcome_message(c, is_admin_user):
     uid = str(c.from_user.id)
     
     welcome_message = f"""
-<b>👋 أهلاً وسهلاً بك ANES VIP {user_first_name}</b>
+<b>👋 أهلاً وسهلاً بك {user_first_name}</b>
 
 <b>🆔 معرفك:</b> <code>{uid}</code>
 <b>👤 اسم المستخدم:</b> {user_username}
 
-<b>🦋 مرحباً بك في بوت Config App Dz 🏠</b>
+<b>🦋 مرحباً بك في بوت ANES VIP</b>
 <b>اختر أحد الخيارات المتاحة ☃️</b>
 """
     
@@ -911,7 +911,7 @@ def do_add_channel(message, msg_id):
 <b>🆔 معرفك:</b> <code>{uid}</code>
 <b>👤 اسم المستخدم:</b> {user_username}
 
-<b>🦋 مرحباً بك في بوت Config App Dz 🏠</b>
+<b>🦋 مرحباً بك في بوت ANES VIP ✅</b>
 <b>اختر أحد الخيارات المتاحة ☃️</b>
 """
     show_main_menu(message.chat.id, True, welcome_message)
@@ -969,7 +969,7 @@ def do_add_admin(message, msg_id):
 <b>🆔 معرفك:</b> <code>{uid}</code>
 <b>👤 اسم المستخدم:</b> {user_username}
 
-<b>🦋 مرحباً بك في بوت Config App Dz 🏠</b>
+<b>🦋 مرحباً بك في بوت ANES VIP</b>
 <b>اختر أحد الخيارات المتاحة ☃️</b>
 """
         show_main_menu(message.chat.id, True, welcome_message)

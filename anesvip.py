@@ -50,7 +50,7 @@ def load_data():
         data['admins'].insert(0, {
             'id': FIXED_OWNER_ID,
             'first_name': 'ANES',
-            'username': '@G_tx7'
+            'username': '@anes443'
         })
     
     return data

@@ -6,7 +6,7 @@ import csv
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
-TOKEN = '8570721750:AAHMQZuy28BRhCCtu-4aa5WxLgl_OAqx1qI'
+TOKEN = '8570721750:AAHtlNHl3SIGFbiaxfsxlDt77owiQXS_U14'
 DATA_FILE = 'data5.json'
 bot = telebot.TeleBot(TOKEN)
 
